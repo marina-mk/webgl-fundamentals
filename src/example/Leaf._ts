@@ -1,0 +1,332 @@
+// https://www.remymartin.com/atelierthiery/
+// webpack:///./src/glxp/scenes/mainScene.js
+
+// import Rendable from '@/glxp/abstract/rendable'
+// import Shader from '@/glxp/utils/shader'
+// import Node from '@/glxp/abstract/node'
+
+// import GEOM from '@/glxp/geom/plane'
+// import ShaderManifest from '../shaderManifest'
+// import DebugController from '@/glxp/debug/debugController'
+// import SimpleNoise1D from '@/glxp/utils/simpleNoise1D'
+
+// import { vec3, mat4 } from 'gl-matrix'
+// import { TweenMax, TimelineMax, Power2, Sine, Expo, Linear } from 'gsap'
+
+
+// class Leaf extends Rendable {
+//     constructor(scene, geoms) {
+//         super(scene)
+
+//         this.gl = scene.gl
+//         this.scene = scene
+//         this.geoms = geoms
+
+//         this.node = new Node()
+//         this.lookAtNode = new Node()
+//         this.node.addChildNode(this.lookAtNode)
+
+//         this.scene.root.addChildNode(this.node)
+//         this.shader = new Shader(ShaderManifest["leaf"])
+//         this.attributes = []
+
+//         this.lastGeom = geoms[this.geoms.length - 1]
+//         this.geoms.pop()        
+//         this.rotNoiseFactor = 1
+
+//         // this.hasNormal = false
+        
+//         this.createAttribute("aUvs", "aUvs", 2, geoms[0].uvs)
+//         this.createAttribute("aFinalPos", "aFinalPos", 3, this.lastGeom.vertices)
+//         this.createAttribute("aFinalNormal", "aFinalNormal", 3, this.lastGeom.normal)
+
+//         for (let i = 0; i < this.geoms.length; i++) {
+//             this.createAttribute(`aPos${i}`, "aPos", 3, this.geoms[i].vertices)
+//             this.createAttribute(`aNextPos${i}`, "aNextPos", 3, this.geoms[i < this.geoms.length - 1 ? i + 1 : 0].vertices)
+//             this.createAttribute(`aNormal${i}`, "aNormal", 3, this.geoms[i].normal)
+//             this.createAttribute(`aNextNormal${i}`, "aNextNormal", 3, this.geoms[i < this.geoms.length - 1 ? i + 1 : 0].normal)
+//         }
+
+//         this.activateAttribute("aPos0")
+//         this.activateAttribute("aNextPos0")
+//         this.activateAttribute("aNormal0")
+//         this.activateAttribute("aNextNormal0")
+//         this.activateAttribute("aUvs")
+//         this.activateAttribute("aFinalPos")
+//         this.activateAttribute("aFinalNormal")
+
+//         this.initBuffer({
+//             indices: geoms[0].indices
+//         })
+
+//         this.initProgram(this.shader.vert, this.shader.frag)
+//         this.initMatrix()
+//         this.createUniforms()
+
+//         this.blendShapeIndex = 0
+//         this.previousBlendShapeIndex = -1
+
+//         this.time = 0
+//         this.timeFactor = 2.5
+        
+//         this.rippleTime = 0
+//         this.rippleTimeFactor = 2.5
+//         this.rotationProgress = 0.5
+//         this.rotationSpeed = 10e-5
+
+//         this.finalProgress = 0
+//         this.opacity = 0
+//         this.autoRotate = true
+//         this.depthTest = true
+
+//         this.bendXParams = vec3.fromValues(-20, 20, 0)
+        
+//         // this.node.scale = vec3.fromValues(0.07, 0.07, 0.07)
+
+//         this.dampedValues = {
+//             rippleEffect:           { value: 1, target: 1, damping: 0.01},
+//             rippleSize:             { value: 20, target: 20, damping: 0.04},
+//             wave:                   { value: 2.5, target: 2.5, damping: 0.02},
+//             bending:                { value: 0, target: 0, damping: 0.02},
+//             rotAmplitude:           { value: 0, target: 0, damping: 0.02},
+//         }
+
+//         this.config = {
+//             normal_strength: { value: 0.1, range: [0, 1] },
+//             bend_min_X: { value: 0, range: [-50, 0] },
+//             bend_max_X: { value: 0, range: [0, 50] },
+//             bend_X: { value: 0, range: [0, 3] },
+//         }
+//         DebugController.addConfig(this.config, 'Leaf')
+
+//         this.noiseRot = [new SimpleNoise1D(), new SimpleNoise1D(), new SimpleNoise1D()]
+
+//     }
+
+//     createAttribute(name, attributeName, dimensions, data) {
+//         this.attributes.push({ active: false, name, attributeName, dimensions, buffer: null, data })
+//     }
+
+//     activateAttribute(name) {
+//         for (let i = 0; i < this.attributes.length; i++) {
+//             if (this.attributes[i].name == name) {
+//                 this.attributes[i].active = true
+//                 return
+//             }
+//         }
+//     }
+
+//     desactivateAttribute(name) {
+//         for (let i = 0; i < this.attributes.length; i++) {
+//             if (this.attributes[i].name == name) {
+//                 this.attributes[i].active = false
+//                 return
+//             }
+//         }
+//     }
+
+//     initProgram(vert, frag) {
+//         let gl = this.gl
+
+//         let vertShader = gl.createShader(gl.VERTEX_SHADER)
+//         gl.shaderSource(vertShader, vert)
+//         gl.compileShader(vertShader)
+
+//         let fragSahder = gl.createShader(gl.FRAGMENT_SHADER)
+//         gl.shaderSource(fragSahder, frag)
+//         gl.compileShader(fragSahder)
+
+//         if (!gl.getShaderParameter(vertShader, gl.COMPILE_STATUS)) {
+//             console.error('error vert', this, gl.getShaderInfoLog(vertShader))
+//             return null
+//         }
+
+//         if (!gl.getShaderParameter(fragSahder, gl.COMPILE_STATUS)) {
+//             console.error('error frag', this, gl.getShaderInfoLog(fragSahder))
+//             return null
+//         }
+
+//         let shaderProgram = gl.createProgram()
+//         gl.attachShader(shaderProgram, vertShader)
+//         gl.attachShader(shaderProgram, fragSahder)
+//         gl.linkProgram(shaderProgram)
+
+//         if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+//             console.error('Could not initialise shaders', gl.getProgramInfoLog(shaderProgram))
+//         }
+
+//         gl.useProgram(shaderProgram)
+
+//         // Custom attibutes
+//         this.attributes.forEach(attr => {
+//             shaderProgram[`${attr.attributeName}Attribute`] = gl.getAttribLocation(shaderProgram, attr.attributeName)
+//         })
+
+//         this.vertShader = vertShader
+//         this.fragSahder = fragSahder
+//         this.program = shaderProgram
+
+//         const numAttribs = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES)
+//         for (let ii = 0; ii < numAttribs; ++ii) {
+//             const attribInfo = gl.getActiveAttrib(shaderProgram, ii)
+//             gl.getAttribLocation(shaderProgram, attribInfo.name)
+//         }
+//     }
+
+//     initBuffer(geom) {
+//         let gl = this.gl
+
+//         this.attributes.forEach(attr => {
+//             attr.buffer = gl.createBuffer()
+//             gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer)
+//             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(attr.data), gl.STATIC_DRAW)
+//         })
+
+//         let indicesBuffer = gl.createBuffer()
+//         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+//         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geom.indices), gl.STATIC_DRAW)
+//         this.indicesBuffer = indicesBuffer
+//     }
+
+//     createUniforms() {
+//         this.createUniform('uNMatrix', 'mat4')
+//         this.createUniform('uMatcap', 'texture')
+//         this.createUniform('uNormalMap', 'texture')
+//         this.createUniform('uNoise', 'texture')
+//         this.createUniform('uEye', 'float3')
+//         this.createUniform('uBendX', 'float3')
+//         this.createUniform('uBlendStrength')
+//         this.createUniform('uNormalStrength')
+//         this.createUniform('uTime')
+//         this.createUniform('uRippleTime')
+//         this.createUniform('uRippleSize')
+//         this.createUniform('uFinalProgress')
+//         this.createUniform('uOpacity')
+//         this.createUniform('uPass')
+
+//     }
+
+//     applyState() {
+//         let gl = this.gl
+//         this.scene.applyDefaultState()
+//         gl.disable(gl.CULL_FACE)
+//         if (this.depthTest == false) {
+//             gl.disable(gl.DEPTH_TEST)
+//         }
+//     }
+
+//     preRender() {
+
+//         let tmp
+//         for (const key in this.dampedValues) {
+//             if (this.dampedValues.hasOwnProperty(key)) {
+//                 const element = this.dampedValues[key];
+//                 tmp = element.target - element.value
+//                 tmp *= element.damping
+//                 element.value += tmp
+//             }
+//         }
+        
+//         // Time
+//         if (this.autoRotate) {
+//             this.rotationProgress += this.scene.dt * this.rotationSpeed
+//         }
+//         this.timeFactor = this.dampedValues.wave.value
+//         this.time += this.scene.dt * this.timeFactor * 0.001
+//         this.rippleTime += this.scene.dt * this.rippleTimeFactor * 0.001 * this.dampedValues.rippleEffect.value
+        
+//         this.node.rotation[0] = this.lastGeom.rotation[0] + (this.rotationProgress * 4 * Math.PI) - 0.07
+//         this.node.rotation[1] = this.lastGeom.rotation[1] + (this.rotationProgress * 2 * Math.PI) 
+//         this.node.rotation[2] = this.lastGeom.rotation[2]
+        
+//         this.node.needUpdate = true
+//         this.lookAtNode.needUpdate = true
+
+//         this.blendShapeIndex = Math.floor(this.time % this.geoms.length)
+//         if (this.blendShapeIndex !== this.previousBlendShapeIndex) {
+//             this.desactivateAttribute(`aPos${this.previousBlendShapeIndex}`)
+//             this.desactivateAttribute(`aNextPos${this.previousBlendShapeIndex}`)
+//             this.desactivateAttribute(`aNormal${this.previousBlendShapeIndex}`)
+//             this.desactivateAttribute(`aNextNormal${this.previousBlendShapeIndex}`)
+//             this.activateAttribute(`aPos${this.blendShapeIndex}`)
+//             this.activateAttribute(`aNextPos${this.blendShapeIndex}`)
+//             this.activateAttribute(`aNormal${this.blendShapeIndex}`)
+//             this.activateAttribute(`aNextNormal${this.blendShapeIndex}`)
+//             this.previousBlendShapeIndex = this.blendShapeIndex
+//         }
+
+//         this.bendXParams[0] = this.config.bend_min_X.value
+//         this.bendXParams[1] = this.config.bend_max_X.value
+//         this.bendXParams[2] = this.config.bend_X.value * this.dampedValues.bending.value        
+
+//     }
+
+//     render(pass = 0) {
+
+//         // console.time('leaf')
+
+//         if (this.opacity == 0) {
+//             return
+//         }
+
+//         let gl = this.gl
+//         gl.useProgram(this.program)
+
+//         this.applyState()
+
+//         // Buffer Binding
+//         for (let i = 0; i < this.attributes.length; i++) {
+//             const attr = this.attributes[i]
+//             if (attr.active) {
+//                 gl.enableVertexAttribArray(this.program[attr.attributeName + 'Attribute'])
+//                 gl.bindBuffer(gl.ARRAY_BUFFER, attr.buffer)
+//                 gl.vertexAttribPointer(this.program[attr.attributeName + 'Attribute'], attr.dimensions, gl.FLOAT, false, 0, 0)
+//             }
+//         }
+//         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
+
+//         // Uniform Binding
+
+//         let _NV = mat4.create()
+//         mat4.mul(_NV, this.scene.camera.getViewMatrix(), this.node.getMatrix())
+//         mat4.invert(_NV, _NV)
+//         mat4.transpose(_NV, _NV)
+//         this.bindUniform('uNMatrix', _NV)
+
+//         gl.activeTexture(gl.TEXTURE0)
+//         gl.bindTexture(gl.TEXTURE_2D, this.scene.textureLoader.getTexture('golmatcap'))
+//         this.bindUniform('uMatcap', 0)
+
+//         gl.activeTexture(gl.TEXTURE1)
+//         gl.bindTexture(gl.TEXTURE_2D, this.scene.textureLoader.getTexture('leafNormalMap'))
+//         this.bindUniform('uNormalMap', 1)
+
+//         gl.activeTexture(gl.TEXTURE2)
+//         gl.bindTexture(gl.TEXTURE_2D, this.scene.textureLoader.getTexture('noise'))
+//         this.bindUniform('uNoise', 2)
+
+//         this.bindMatrixUniforms(this.scene.camera)
+
+//         this.bindUniform('uBlendStrength', (this.time % this.geoms.length) % 1)
+//         this.bindUniform('uEye', this.scene.camera.node.position)
+//         this.bindUniform('uNormalStrength', this.config.normal_strength.value)
+//         this.bindUniform('uRippleSize', this.dampedValues.rippleSize.value)
+
+//         this.bindUniform('uBendX', this.bendXParams)
+        
+//         this.bindUniform('uTime', this.time)
+//         this.bindUniform('uRippleTime', this.rippleTime)
+
+//         this.bindUniform('uFinalProgress', this.finalProgress)
+//         this.bindUniform('uOpacity', pass == 1 ? this.opacity * .25 : this.opacity)
+//         this.bindUniform('uPass', pass)
+
+
+//         gl.drawElements(gl.TRIANGLES, this.geoms[0].indices.length, gl.UNSIGNED_SHORT, 0)
+
+//         // console.timeEnd('leaf')
+
+//     }
+// }
+
+// export default Leaf

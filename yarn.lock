@@ -10967,6 +10967,11 @@ web-vitals@^1.0.1:
   resolved "https://registry.yarnpkg.com/web-vitals/-/web-vitals-1.1.2.tgz#06535308168986096239aa84716e68b4c6ae6d1c"
   integrity sha512-PFMKIY+bRSXlMxVAQ+m2aw9c/ioUYfDgrYot0YUa+/xa0sakubWhSDyxAKwzymvXVdF4CZI71g06W+mqhzu6ig==
 
+webgl-strict-types@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/webgl-strict-types/-/webgl-strict-types-1.0.4.tgz#1e88af7bbe78b56206fc6d01f5fb943dec898a65"
+  integrity sha512-Mi4lk/bG6cySzezKBR0LJFCaRCI0+PDdFZYvw6ByDdrdJfAnivjhJ/kedRtoj8TETq6cAXk0aVtYuBYk7LYibA==
+
 webidl-conversions@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/webidl-conversions/-/webidl-conversions-5.0.0.tgz#ae59c8a00b121543a2acc65c0434f57b0fc11aff"
